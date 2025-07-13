@@ -1,5 +1,6 @@
 package com.letrasypapeles.backend.controller;
 
+import com.letrasypapeles.backend.assembler.ProductoModelAssembler;
 import com.letrasypapeles.backend.entity.Producto;
 import com.letrasypapeles.backend.service.ProductoService;
 import org.junit.jupiter.api.BeforeEach;
@@ -7,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
@@ -22,6 +25,9 @@ class ProductoControllerTest {
 
     @Mock
     private ProductoService productoService;
+
+    @Mock
+    private ProductoModelAssembler productoModelAssembler;
 
     @InjectMocks
     private ProductoController productoController;
@@ -41,61 +47,69 @@ class ProductoControllerTest {
     @Test
     void testObtenerTodos() {
         List<Producto> productos = Arrays.asList(producto);
+        EntityModel<Producto> productoModel = EntityModel.of(producto);
         when(productoService.obtenerTodos()).thenReturn(productos);
+        when(productoModelAssembler.toModel(producto)).thenReturn(productoModel);
 
-        ResponseEntity<List<Producto>> response = productoController.obtenerTodos();
+        ResponseEntity<CollectionModel<EntityModel<Producto>>> response = productoController.obtenerTodos();
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals(1, response.getBody().size());
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals(1, response.getBody().getContent().size());
     }
 
     @Test
     void testObtenerPorId() {
+        EntityModel<Producto> productoModel = EntityModel.of(producto);
         when(productoService.obtenerPorId(1L)).thenReturn(Optional.of(producto));
+        when(productoModelAssembler.toModel(producto)).thenReturn(productoModel);
 
-        ResponseEntity<Producto> response = productoController.obtenerPorId(1L);
+        ResponseEntity<EntityModel<Producto>> response = productoController.obtenerPorId(1L);
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals("Cuaderno", response.getBody().getNombre());
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals("Cuaderno", response.getBody().getContent().getNombre());
     }
 
     @Test
     void testObtenerPorIdNoEncontrado() {
         when(productoService.obtenerPorId(1L)).thenReturn(Optional.empty());
 
-        ResponseEntity<Producto> response = productoController.obtenerPorId(1L);
+        ResponseEntity<EntityModel<Producto>> response = productoController.obtenerPorId(1L);
 
-        assertEquals(404, response.getStatusCodeValue());
+        assertEquals(404, response.getStatusCode().value());
     }
 
     @Test
     void testCrearProducto() {
+        EntityModel<Producto> productoModel = EntityModel.of(producto);
         when(productoService.guardar(any(Producto.class))).thenReturn(producto);
+        when(productoModelAssembler.toModel(producto)).thenReturn(productoModel);
 
-        ResponseEntity<Producto> response = productoController.crearProducto(producto);
+        ResponseEntity<EntityModel<Producto>> response = productoController.crearProducto(producto);
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals("Cuaderno", response.getBody().getNombre());
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals("Cuaderno", response.getBody().getContent().getNombre());
     }
 
     @Test
     void testActualizarProducto() {
+        EntityModel<Producto> productoModel = EntityModel.of(producto);
         when(productoService.obtenerPorId(1L)).thenReturn(Optional.of(producto));
         when(productoService.guardar(any(Producto.class))).thenReturn(producto);
+        when(productoModelAssembler.toModel(producto)).thenReturn(productoModel);
 
-        ResponseEntity<Producto> response = productoController.actualizarProducto(1L, producto);
+        ResponseEntity<EntityModel<Producto>> response = productoController.actualizarProducto(1L, producto);
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals("Cuaderno", response.getBody().getNombre());
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals("Cuaderno", response.getBody().getContent().getNombre());
     }
 
     @Test
     void testActualizarProductoNoEncontrado() {
         when(productoService.obtenerPorId(1L)).thenReturn(Optional.empty());
 
-        ResponseEntity<Producto> response = productoController.actualizarProducto(1L, producto);
+        ResponseEntity<EntityModel<Producto>> response = productoController.actualizarProducto(1L, producto);
 
-        assertEquals(404, response.getStatusCodeValue());
+        assertEquals(404, response.getStatusCode().value());
     }
 
     @Test
@@ -105,7 +119,7 @@ class ProductoControllerTest {
 
         ResponseEntity<Void> response = productoController.eliminarProducto(1L);
 
-        assertEquals(200, response.getStatusCodeValue());
+        assertEquals(200, response.getStatusCode().value());
     }
 
     @Test
@@ -114,6 +128,6 @@ class ProductoControllerTest {
 
         ResponseEntity<Void> response = productoController.eliminarProducto(1L);
 
-        assertEquals(404, response.getStatusCodeValue());
+        assertEquals(404, response.getStatusCode().value());
     }
 }

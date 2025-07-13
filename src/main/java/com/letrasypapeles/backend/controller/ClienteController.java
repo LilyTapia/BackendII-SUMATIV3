@@ -1,5 +1,6 @@
 package com.letrasypapeles.backend.controller;
 
+import com.letrasypapeles.backend.assembler.ClienteModelAssembler;
 import com.letrasypapeles.backend.entity.Cliente;
 import com.letrasypapeles.backend.service.ClienteService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -7,12 +8,17 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.stream.Collectors;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 @RestController
 @RequestMapping("/api/clientes")
@@ -22,13 +28,23 @@ public class ClienteController {
     @Autowired
     private ClienteService clienteService;
 
+    @Autowired
+    private ClienteModelAssembler clienteModelAssembler;
+
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Obtiene todos los clientes", description = "Devuelve la lista completa de clientes registrados")
     @ApiResponse(responseCode = "200", description = "Clientes recuperados exitosamente")
-    public ResponseEntity<List<Cliente>> obtenerTodos() {
+    public ResponseEntity<CollectionModel<EntityModel<Cliente>>> obtenerTodos() {
         List<Cliente> clientes = clienteService.obtenerTodos();
-        return ResponseEntity.ok(clientes);
+        List<EntityModel<Cliente>> clientesModel = clientes.stream()
+                .map(clienteModelAssembler::toModel)
+                .collect(Collectors.toList());
+
+        CollectionModel<EntityModel<Cliente>> collectionModel = CollectionModel.of(clientesModel);
+        collectionModel.add(linkTo(ClienteController.class).withSelfRel());
+
+        return ResponseEntity.ok(collectionModel);
     }
 
     @GetMapping("/perfil")
@@ -61,11 +77,12 @@ public class ClienteController {
         @ApiResponse(responseCode = "200", description = "Cliente recuperado exitosamente"),
         @ApiResponse(responseCode = "404", description = "Cliente no encontrado")
     })
-    public ResponseEntity<Cliente> obtenerPorId(@PathVariable Long id) {
+    public ResponseEntity<EntityModel<Cliente>> obtenerPorId(@PathVariable Long id) {
         return clienteService.obtenerPorId(id)
                 .map(cliente -> {
                     cliente.setContraseña(null); // No exponer la contraseña
-                    return ResponseEntity.ok(cliente);
+                    EntityModel<Cliente> clienteModel = clienteModelAssembler.toModel(cliente);
+                    return ResponseEntity.ok(clienteModel);
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -76,10 +93,11 @@ public class ClienteController {
         @ApiResponse(responseCode = "200", description = "Cliente registrado exitosamente"),
         @ApiResponse(responseCode = "400", description = "Solicitud inválida")
     })
-    public ResponseEntity<Cliente> registrarCliente(@RequestBody Cliente cliente) {
+    public ResponseEntity<EntityModel<Cliente>> registrarCliente(@RequestBody Cliente cliente) {
         Cliente nuevoCliente = clienteService.registrarCliente(cliente);
         nuevoCliente.setContraseña(null); // No exponer la contraseña
-        return ResponseEntity.ok(nuevoCliente);
+        EntityModel<Cliente> clienteModel = clienteModelAssembler.toModel(nuevoCliente);
+        return ResponseEntity.ok(clienteModel);
     }
 
     @PutMapping("/{id}")
@@ -88,13 +106,14 @@ public class ClienteController {
         @ApiResponse(responseCode = "200", description = "Cliente actualizado exitosamente"),
         @ApiResponse(responseCode = "404", description = "Cliente no encontrado")
     })
-    public ResponseEntity<Cliente> actualizarCliente(@PathVariable Long id, @RequestBody Cliente cliente) {
+    public ResponseEntity<EntityModel<Cliente>> actualizarCliente(@PathVariable Long id, @RequestBody Cliente cliente) {
         return clienteService.obtenerPorId(id)
                 .map(c -> {
                     cliente.setId(id);
                     Cliente clienteActualizado = clienteService.actualizarCliente(cliente);
                     clienteActualizado.setContraseña(null);
-                    return ResponseEntity.ok(clienteActualizado);
+                    EntityModel<Cliente> clienteModel = clienteModelAssembler.toModel(clienteActualizado);
+                    return ResponseEntity.ok(clienteModel);
                 })
                 .orElse(ResponseEntity.notFound().build());
     }

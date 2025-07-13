@@ -4,6 +4,8 @@ import com.letrasypapeles.backend.entity.Cliente;
 import com.letrasypapeles.backend.entity.Pedido;
 import com.letrasypapeles.backend.entity.Producto;
 import com.letrasypapeles.backend.repository.PedidoRepository;
+import com.letrasypapeles.backend.repository.ClienteRepository;
+import com.letrasypapeles.backend.repository.ProductoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +28,12 @@ public class PedidoServiceTest {
 
     @Mock
     private PedidoRepository pedidoRepository;
+
+    @Mock
+    private ClienteRepository clienteRepository;
+
+    @Mock
+    private ProductoRepository productoRepository;
 
     @InjectMocks
     private PedidoService pedidoService;

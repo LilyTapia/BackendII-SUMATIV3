@@ -1,5 +1,6 @@
 package com.letrasypapeles.backend.controller;
 
+import com.letrasypapeles.backend.assembler.ClienteModelAssembler;
 import com.letrasypapeles.backend.entity.Cliente;
 import com.letrasypapeles.backend.service.ClienteService;
 import org.junit.jupiter.api.BeforeEach;
@@ -7,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -26,6 +29,9 @@ class ClienteControllerTest {
     @Mock
     private ClienteService clienteService;
 
+    @Mock
+    private ClienteModelAssembler clienteModelAssembler;
+
     @InjectMocks
     private ClienteController clienteController;
 
@@ -44,61 +50,69 @@ class ClienteControllerTest {
     @Test
     void testObtenerTodos() {
         List<Cliente> clientes = Arrays.asList(cliente);
+        EntityModel<Cliente> clienteModel = EntityModel.of(cliente);
         when(clienteService.obtenerTodos()).thenReturn(clientes);
+        when(clienteModelAssembler.toModel(cliente)).thenReturn(clienteModel);
 
-        ResponseEntity<List<Cliente>> response = clienteController.obtenerTodos();
+        ResponseEntity<CollectionModel<EntityModel<Cliente>>> response = clienteController.obtenerTodos();
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals(1, response.getBody().size());
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals(1, response.getBody().getContent().size());
     }
 
     @Test
     void testObtenerPorId() {
+        EntityModel<Cliente> clienteModel = EntityModel.of(cliente);
         when(clienteService.obtenerPorId(1L)).thenReturn(Optional.of(cliente));
+        when(clienteModelAssembler.toModel(cliente)).thenReturn(clienteModel);
 
-        ResponseEntity<Cliente> response = clienteController.obtenerPorId(1L);
+        ResponseEntity<EntityModel<Cliente>> response = clienteController.obtenerPorId(1L);
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertNull(response.getBody().getContraseña());
+        assertEquals(200, response.getStatusCode().value());
+        assertNull(response.getBody().getContent().getContraseña());
     }
 
     @Test
     void testObtenerPorIdNoEncontrado() {
         when(clienteService.obtenerPorId(1L)).thenReturn(Optional.empty());
 
-        ResponseEntity<Cliente> response = clienteController.obtenerPorId(1L);
+        ResponseEntity<EntityModel<Cliente>> response = clienteController.obtenerPorId(1L);
 
-        assertEquals(404, response.getStatusCodeValue());
+        assertEquals(404, response.getStatusCode().value());
     }
 
     @Test
     void testRegistrarCliente() {
+        EntityModel<Cliente> clienteModel = EntityModel.of(cliente);
         when(clienteService.registrarCliente(any(Cliente.class))).thenReturn(cliente);
+        when(clienteModelAssembler.toModel(cliente)).thenReturn(clienteModel);
 
-        ResponseEntity<Cliente> response = clienteController.registrarCliente(cliente);
+        ResponseEntity<EntityModel<Cliente>> response = clienteController.registrarCliente(cliente);
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertNull(response.getBody().getContraseña());
+        assertEquals(200, response.getStatusCode().value());
+        assertNull(response.getBody().getContent().getContraseña());
     }
 
     @Test
     void testActualizarCliente() {
+        EntityModel<Cliente> clienteModel = EntityModel.of(cliente);
         when(clienteService.obtenerPorId(1L)).thenReturn(Optional.of(cliente));
         when(clienteService.actualizarCliente(any(Cliente.class))).thenReturn(cliente);
+        when(clienteModelAssembler.toModel(cliente)).thenReturn(clienteModel);
 
-        ResponseEntity<Cliente> response = clienteController.actualizarCliente(1L, cliente);
+        ResponseEntity<EntityModel<Cliente>> response = clienteController.actualizarCliente(1L, cliente);
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertNull(response.getBody().getContraseña());
+        assertEquals(200, response.getStatusCode().value());
+        assertNull(response.getBody().getContent().getContraseña());
     }
 
     @Test
     void testActualizarClienteNoEncontrado() {
         when(clienteService.obtenerPorId(1L)).thenReturn(Optional.empty());
 
-        ResponseEntity<Cliente> response = clienteController.actualizarCliente(1L, cliente);
+        ResponseEntity<EntityModel<Cliente>> response = clienteController.actualizarCliente(1L, cliente);
 
-        assertEquals(404, response.getStatusCodeValue());
+        assertEquals(404, response.getStatusCode().value());
     }
 
     @Test
@@ -108,7 +122,7 @@ class ClienteControllerTest {
 
         ResponseEntity<Void> response = clienteController.eliminarCliente(1L);
 
-        assertEquals(200, response.getStatusCodeValue());
+        assertEquals(200, response.getStatusCode().value());
     }
 
     @Test
@@ -117,7 +131,7 @@ class ClienteControllerTest {
 
         ResponseEntity<Void> response = clienteController.eliminarCliente(1L);
 
-        assertEquals(404, response.getStatusCodeValue());
+        assertEquals(404, response.getStatusCode().value());
     }
 
     @Test

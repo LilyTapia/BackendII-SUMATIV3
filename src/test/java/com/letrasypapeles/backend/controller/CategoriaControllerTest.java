@@ -1,5 +1,6 @@
 package com.letrasypapeles.backend.controller;
 
+import com.letrasypapeles.backend.assembler.CategoriaModelAssembler;
 import com.letrasypapeles.backend.entity.Categoria;
 import com.letrasypapeles.backend.service.CategoriaService;
 import org.junit.jupiter.api.BeforeEach;
@@ -7,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
 
 import java.util.Arrays;
@@ -21,6 +24,9 @@ class CategoriaControllerTest {
 
     @Mock
     private CategoriaService categoriaService;
+
+    @Mock
+    private CategoriaModelAssembler categoriaModelAssembler;
 
     @InjectMocks
     private CategoriaController categoriaController;
@@ -38,62 +44,69 @@ class CategoriaControllerTest {
     @Test
     void testObtenerTodas() {
         List<Categoria> categorias = Arrays.asList(categoria);
+        EntityModel<Categoria> categoriaModel = EntityModel.of(categoria);
         when(categoriaService.obtenerTodas()).thenReturn(categorias);
+        when(categoriaModelAssembler.toModel(categoria)).thenReturn(categoriaModel);
 
-        ResponseEntity<List<Categoria>> response = categoriaController.obtenerTodas();
+        ResponseEntity<CollectionModel<EntityModel<Categoria>>> response = categoriaController.obtenerTodas();
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals(1, response.getBody().size());
-        assertEquals("Papelería", response.getBody().get(0).getNombre());
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals(1, response.getBody().getContent().size());
     }
 
     @Test
     void testObtenerPorId() {
+        EntityModel<Categoria> categoriaModel = EntityModel.of(categoria);
         when(categoriaService.obtenerPorId(1L)).thenReturn(Optional.of(categoria));
+        when(categoriaModelAssembler.toModel(categoria)).thenReturn(categoriaModel);
 
-        ResponseEntity<Categoria> response = categoriaController.obtenerPorId(1L);
+        ResponseEntity<EntityModel<Categoria>> response = categoriaController.obtenerPorId(1L);
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals("Papelería", response.getBody().getNombre());
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals("Papelería", response.getBody().getContent().getNombre());
     }
 
     @Test
     void testObtenerPorIdNoEncontrado() {
         when(categoriaService.obtenerPorId(1L)).thenReturn(Optional.empty());
 
-        ResponseEntity<Categoria> response = categoriaController.obtenerPorId(1L);
+        ResponseEntity<EntityModel<Categoria>> response = categoriaController.obtenerPorId(1L);
 
-        assertEquals(404, response.getStatusCodeValue());
+        assertEquals(404, response.getStatusCode().value());
     }
 
     @Test
     void testCrearCategoria() {
+        EntityModel<Categoria> categoriaModel = EntityModel.of(categoria);
         when(categoriaService.guardar(any(Categoria.class))).thenReturn(categoria);
+        when(categoriaModelAssembler.toModel(categoria)).thenReturn(categoriaModel);
 
-        ResponseEntity<Categoria> response = categoriaController.crearCategoria(categoria);
+        ResponseEntity<EntityModel<Categoria>> response = categoriaController.crearCategoria(categoria);
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals("Papelería", response.getBody().getNombre());
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals("Papelería", response.getBody().getContent().getNombre());
     }
 
     @Test
     void testActualizarCategoria() {
+        EntityModel<Categoria> categoriaModel = EntityModel.of(categoria);
         when(categoriaService.obtenerPorId(1L)).thenReturn(Optional.of(categoria));
         when(categoriaService.guardar(any(Categoria.class))).thenReturn(categoria);
+        when(categoriaModelAssembler.toModel(categoria)).thenReturn(categoriaModel);
 
-        ResponseEntity<Categoria> response = categoriaController.actualizarCategoria(1L, categoria);
+        ResponseEntity<EntityModel<Categoria>> response = categoriaController.actualizarCategoria(1L, categoria);
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals("Papelería", response.getBody().getNombre());
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals("Papelería", response.getBody().getContent().getNombre());
     }
 
     @Test
     void testActualizarCategoriaNoEncontrada() {
         when(categoriaService.obtenerPorId(1L)).thenReturn(Optional.empty());
 
-        ResponseEntity<Categoria> response = categoriaController.actualizarCategoria(1L, categoria);
+        ResponseEntity<EntityModel<Categoria>> response = categoriaController.actualizarCategoria(1L, categoria);
 
-        assertEquals(404, response.getStatusCodeValue());
+        assertEquals(404, response.getStatusCode().value());
     }
 
     @Test
@@ -103,7 +116,7 @@ class CategoriaControllerTest {
 
         ResponseEntity<Void> response = categoriaController.eliminarCategoria(1L);
 
-        assertEquals(200, response.getStatusCodeValue());
+        assertEquals(200, response.getStatusCode().value());
     }
 
     @Test
@@ -112,6 +125,6 @@ class CategoriaControllerTest {
 
         ResponseEntity<Void> response = categoriaController.eliminarCategoria(1L);
 
-        assertEquals(404, response.getStatusCodeValue());
+        assertEquals(404, response.getStatusCode().value());
     }
 }

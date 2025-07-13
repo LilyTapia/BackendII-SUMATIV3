@@ -1,5 +1,6 @@
 package com.letrasypapeles.backend.controller;
 
+import com.letrasypapeles.backend.assembler.ReservaModelAssembler;
 import com.letrasypapeles.backend.entity.Reserva;
 import com.letrasypapeles.backend.entity.Cliente;
 import com.letrasypapeles.backend.entity.Producto;
@@ -14,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 
@@ -46,6 +49,9 @@ class ReservaControllerTest {
     @Mock
     private ClienteRepository clienteRepository;
 
+    @Mock
+    private ReservaModelAssembler reservaModelAssembler;
+
     @InjectMocks
     private ReservaController reservaController;
 
@@ -61,30 +67,34 @@ class ReservaControllerTest {
     @Test
     void testObtenerTodas() {
         List<Reserva> reservas = Arrays.asList(reserva);
+        EntityModel<Reserva> reservaModel = EntityModel.of(reserva);
         when(reservaService.obtenerTodas()).thenReturn(reservas);
+        when(reservaModelAssembler.toModel(reserva)).thenReturn(reservaModel);
 
-        ResponseEntity<List<Reserva>> response = reservaController.obtenerTodas();
+        ResponseEntity<CollectionModel<EntityModel<Reserva>>> response = reservaController.obtenerTodas();
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals(1, response.getBody().size());
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals(1, response.getBody().getContent().size());
     }
 
     @Test
     void testObtenerPorId() {
+        EntityModel<Reserva> reservaModel = EntityModel.of(reserva);
         when(reservaService.obtenerPorId(1L)).thenReturn(Optional.of(reserva));
+        when(reservaModelAssembler.toModel(reserva)).thenReturn(reservaModel);
 
-        ResponseEntity<Reserva> response = reservaController.obtenerPorId(1L);
+        ResponseEntity<EntityModel<Reserva>> response = reservaController.obtenerPorId(1L);
 
-        assertEquals(200, response.getStatusCodeValue());
+        assertEquals(200, response.getStatusCode().value());
     }
 
     @Test
     void testObtenerPorIdNoEncontrado() {
         when(reservaService.obtenerPorId(1L)).thenReturn(Optional.empty());
 
-        ResponseEntity<Reserva> response = reservaController.obtenerPorId(1L);
+        ResponseEntity<EntityModel<Reserva>> response = reservaController.obtenerPorId(1L);
 
-        assertEquals(404, response.getStatusCodeValue());
+        assertEquals(404, response.getStatusCode().value());
     }
 
     @Test

@@ -1,5 +1,7 @@
 package com.letrasypapeles.backend.controller;
 
+import com.letrasypapeles.backend.assembler.ReservaModelAssembler;
+import com.letrasypapeles.backend.dto.ReservaRequest;
 import com.letrasypapeles.backend.entity.Reserva;
 import com.letrasypapeles.backend.entity.Cliente;
 import com.letrasypapeles.backend.entity.Producto;
@@ -15,6 +17,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,6 +27,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 import java.time.LocalDateTime;
 
 @RestController
@@ -45,13 +52,23 @@ public class ReservaController {
     @Autowired
     private ClienteRepository clienteRepository;
 
+    @Autowired
+    private ReservaModelAssembler reservaModelAssembler;
+
     @GetMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('CLIENTE') or hasRole('VENDEDOR')")
     @Operation(summary = "Obtiene todas las reservas", description = "Devuelve la lista completa de reservas")
     @ApiResponse(responseCode = "200", description = "Reservas recuperadas exitosamente")
-    public ResponseEntity<List<Reserva>> obtenerTodas() {
+    public ResponseEntity<CollectionModel<EntityModel<Reserva>>> obtenerTodas() {
         List<Reserva> reservas = reservaService.obtenerTodas();
-        return ResponseEntity.ok(reservas);
+        List<EntityModel<Reserva>> reservasModel = reservas.stream()
+                .map(reservaModelAssembler::toModel)
+                .collect(Collectors.toList());
+
+        CollectionModel<EntityModel<Reserva>> collectionModel = CollectionModel.of(reservasModel);
+        collectionModel.add(linkTo(ReservaController.class).withSelfRel());
+
+        return ResponseEntity.ok(collectionModel);
     }
 
     @GetMapping("/{id}")
@@ -60,8 +77,9 @@ public class ReservaController {
         @ApiResponse(responseCode = "200", description = "Reserva recuperada exitosamente"),
         @ApiResponse(responseCode = "404", description = "Reserva no encontrada")
     })
-    public ResponseEntity<Reserva> obtenerPorId(@PathVariable Long id) {
+    public ResponseEntity<EntityModel<Reserva>> obtenerPorId(@PathVariable Long id) {
         return reservaService.obtenerPorId(id)
+                .map(reservaModelAssembler::toModel)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -152,6 +170,23 @@ public class ReservaController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/crear")
+    @Operation(summary = "Crear una nueva reserva con IDs", description = "Crea una nueva reserva usando IDs de cliente y producto.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Reserva creada exitosamente"),
+        @ApiResponse(responseCode = "400", description = "Solicitud inválida para crear la reserva"),
+        @ApiResponse(responseCode = "404", description = "Cliente o producto no encontrado")
+    })
+    public ResponseEntity<EntityModel<Reserva>> crearReservaConIds(@RequestBody ReservaRequest reservaRequest) {
+        try {
+            Reserva nuevaReserva = reservaService.crearDesdeReservaRequest(reservaRequest);
+            EntityModel<Reserva> reservaModel = reservaModelAssembler.toModel(nuevaReserva);
+            return ResponseEntity.status(201).body(reservaModel);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
         }
     }
 

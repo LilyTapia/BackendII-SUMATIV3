@@ -1,5 +1,6 @@
 package com.letrasypapeles.backend.controller;
 
+import com.letrasypapeles.backend.assembler.CategoriaModelAssembler;
 import com.letrasypapeles.backend.entity.Categoria;
 import com.letrasypapeles.backend.service.CategoriaService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -7,10 +8,15 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 @RestController
 @RequestMapping("/api/categorias")
@@ -20,12 +26,22 @@ public class CategoriaController {
     @Autowired
     private CategoriaService categoriaService;
 
+    @Autowired
+    private CategoriaModelAssembler categoriaModelAssembler;
+
     @GetMapping
     @Operation(summary = "Obtiene todas las categorías", description = "Devuelve la lista completa de categorías registradas")
     @ApiResponse(responseCode = "200", description = "Categorías recuperadas exitosamente")
-    public ResponseEntity<List<Categoria>> obtenerTodas() {
+    public ResponseEntity<CollectionModel<EntityModel<Categoria>>> obtenerTodas() {
         List<Categoria> categorias = categoriaService.obtenerTodas();
-        return ResponseEntity.ok(categorias);
+        List<EntityModel<Categoria>> categoriasModel = categorias.stream()
+                .map(categoriaModelAssembler::toModel)
+                .collect(Collectors.toList());
+
+        CollectionModel<EntityModel<Categoria>> collectionModel = CollectionModel.of(categoriasModel);
+        collectionModel.add(linkTo(CategoriaController.class).withSelfRel());
+
+        return ResponseEntity.ok(collectionModel);
     }
 
     @GetMapping("/{id}")
@@ -34,8 +50,9 @@ public class CategoriaController {
         @ApiResponse(responseCode = "200", description = "Categoría recuperada exitosamente"),
         @ApiResponse(responseCode = "404", description = "Categoría no encontrada")
     })
-    public ResponseEntity<Categoria> obtenerPorId(@PathVariable Long id) {
+    public ResponseEntity<EntityModel<Categoria>> obtenerPorId(@PathVariable Long id) {
         return categoriaService.obtenerPorId(id)
+                .map(categoriaModelAssembler::toModel)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -46,9 +63,10 @@ public class CategoriaController {
         @ApiResponse(responseCode = "200", description = "Categoría creada exitosamente"),
         @ApiResponse(responseCode = "400", description = "Solicitud inválida")
     })
-    public ResponseEntity<Categoria> crearCategoria(@RequestBody Categoria categoria) {
+    public ResponseEntity<EntityModel<Categoria>> crearCategoria(@RequestBody Categoria categoria) {
         Categoria nuevaCategoria = categoriaService.guardar(categoria);
-        return ResponseEntity.ok(nuevaCategoria);
+        EntityModel<Categoria> categoriaModel = categoriaModelAssembler.toModel(nuevaCategoria);
+        return ResponseEntity.ok(categoriaModel);
     }
 
     @PutMapping("/{id}")
@@ -57,12 +75,13 @@ public class CategoriaController {
         @ApiResponse(responseCode = "200", description = "Categoría actualizada exitosamente"),
         @ApiResponse(responseCode = "404", description = "Categoría no encontrada")
     })
-    public ResponseEntity<Categoria> actualizarCategoria(@PathVariable Long id, @RequestBody Categoria categoria) {
+    public ResponseEntity<EntityModel<Categoria>> actualizarCategoria(@PathVariable Long id, @RequestBody Categoria categoria) {
         return categoriaService.obtenerPorId(id)
                 .map(c -> {
                     categoria.setId(id);
                     Categoria actualizada = categoriaService.guardar(categoria);
-                    return ResponseEntity.ok(actualizada);
+                    EntityModel<Categoria> categoriaModel = categoriaModelAssembler.toModel(actualizada);
+                    return ResponseEntity.ok(categoriaModel);
                 })
                 .orElse(ResponseEntity.notFound().build());
     }

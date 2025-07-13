@@ -1,5 +1,6 @@
 package com.letrasypapeles.backend.controller;
 
+import com.letrasypapeles.backend.assembler.ProductoModelAssembler;
 import com.letrasypapeles.backend.entity.Producto;
 import com.letrasypapeles.backend.service.ProductoService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -9,11 +10,16 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 @RestController
 @RequestMapping("/api/productos")
@@ -22,15 +28,25 @@ public class ProductoController {
     @Autowired
     private ProductoService productoService;
 
+    @Autowired
+    private ProductoModelAssembler productoModelAssembler;
+
     @Operation(summary = "Obtener todos los productos")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Lista de productos obtenida correctamente")
     })
     @GetMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('CLIENTE') or hasRole('VENDEDOR')")
-    public ResponseEntity<List<Producto>> obtenerTodos() {
+    public ResponseEntity<CollectionModel<EntityModel<Producto>>> obtenerTodos() {
         List<Producto> productos = productoService.obtenerTodos();
-        return ResponseEntity.ok(productos);
+        List<EntityModel<Producto>> productosModel = productos.stream()
+                .map(productoModelAssembler::toModel)
+                .collect(Collectors.toList());
+
+        CollectionModel<EntityModel<Producto>> collectionModel = CollectionModel.of(productosModel);
+        collectionModel.add(linkTo(ProductoController.class).withSelfRel());
+
+        return ResponseEntity.ok(collectionModel);
     }
 
     @Operation(summary = "Obtener un producto por su ID")
@@ -39,10 +55,11 @@ public class ProductoController {
         @ApiResponse(responseCode = "404", description = "Producto no encontrado")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<Producto> obtenerPorId(
+    public ResponseEntity<EntityModel<Producto>> obtenerPorId(
             @Parameter(description = "ID del producto a buscar", required = true)
             @PathVariable Long id) {
         return productoService.obtenerPorId(id)
+                .map(productoModelAssembler::toModel)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -54,7 +71,7 @@ public class ProductoController {
     })
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Producto> crearProducto(
+    public ResponseEntity<EntityModel<Producto>> crearProducto(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                 description = "Datos del nuevo producto",
                 required = true,
@@ -62,7 +79,8 @@ public class ProductoController {
             )
             @RequestBody Producto producto) {
         Producto nuevoProducto = productoService.guardar(producto);
-        return ResponseEntity.ok(nuevoProducto);
+        EntityModel<Producto> productoModel = productoModelAssembler.toModel(nuevoProducto);
+        return ResponseEntity.ok(productoModel);
     }
 
     @Operation(summary = "Actualizar un producto existente")
@@ -71,7 +89,7 @@ public class ProductoController {
         @ApiResponse(responseCode = "404", description = "Producto no encontrado")
     })
     @PutMapping("/{id}")
-    public ResponseEntity<Producto> actualizarProducto(
+    public ResponseEntity<EntityModel<Producto>> actualizarProducto(
             @Parameter(description = "ID del producto a actualizar", required = true)
             @PathVariable Long id,
             @RequestBody Producto producto) {
@@ -79,7 +97,8 @@ public class ProductoController {
                 .map(p -> {
                     producto.setId(id);
                     Producto productoActualizado = productoService.guardar(producto);
-                    return ResponseEntity.ok(productoActualizado);
+                    EntityModel<Producto> productoModel = productoModelAssembler.toModel(productoActualizado);
+                    return ResponseEntity.ok(productoModel);
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
