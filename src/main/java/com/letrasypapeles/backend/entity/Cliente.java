@@ -1,5 +1,6 @@
 package com.letrasypapeles.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,6 +34,7 @@ public class Cliente {
     @Column(unique = true)
     private String email;
 
+    @JsonIgnore
     private String contraseña;
 
     private Integer puntosFidelidad;
@@ -46,6 +48,7 @@ public class Cliente {
     @Builder.Default
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
+    @JsonIgnore
     private Set<Role> roles = new HashSet<>();
 
     // Método helper para agregar un rol

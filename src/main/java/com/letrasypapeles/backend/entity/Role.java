@@ -1,5 +1,6 @@
 package com.letrasypapeles.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,6 +29,7 @@ public class Role {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     @Builder.Default
+    @JsonIgnore
     private Set<Cliente> clientes = new HashSet<>();
     
     @Override
